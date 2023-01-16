@@ -41,3 +41,14 @@ class GCPBucketClient:
 
         # Upload the json data to the blob
         blob.upload_from_string(json_data, content_type="application/json")
+
+    def delete_json_files(self, bucket):
+        # Get the bucket
+        bucket = self.client.bucket(bucket)
+
+        # Iterate through all the blobs in the bucket
+        for blob in bucket.list_blobs():
+            # Check if the blob's content type is "application/json"
+            if blob.content_type == "application/json":
+                # Delete the blob
+                blob.delete()

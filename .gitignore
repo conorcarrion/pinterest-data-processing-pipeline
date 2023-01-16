@@ -1,3 +1,7 @@
 pintvenv
 User_Emulation
 config
+airflow.ipynb
+spark.ipynb
+kafka.ipynb
+pom.xml
