@@ -3,7 +3,7 @@ from pyspark.sql import SparkSession
 from pyspark import SparkConf, SparkContext
 
 
-class Spark:
+class BatchSpark:
     def __init__(self):
 
         with open("config/spark.yaml", "r") as outfile:
