@@ -1,6 +1,7 @@
 import os
 import pyspark.sql.types as T
 import pyspark.sql.functions as F
+from pyspark.sql import DataFrameWriter
 from pyspark.sql import SparkSession
 from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
@@ -8,7 +9,8 @@ from pyspark.streaming import StreamingContext
 
 os.environ[
     "PYSPARK_SUBMIT_ARGS"
-] = "--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.1 pyspark-shell"
+] = "--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.1,org.postgresql:postgresql:42.2.14 pyspark-shell"
+
 
 sc = SparkContext("local", "Kafka Consumer")
 ssc = StreamingContext(sc, 30)
@@ -51,27 +53,47 @@ exploding_df = data_df.withColumn(
 
 
 exploding_df = (
-    exploding_df.withColumn("value", F.from_json(exploding_df["value"], schema))
-    .select(F.col("value.*"))
-    .drop("index")
-    .withColumn("follower_count", F.regexp_replace("follower_count", "k", "000"))
+    exploding_df.withColumn(
+        "follower_count", F.regexp_replace("follower_count", "k", "000")
+    )
     .withColumn("follower_count", F.regexp_replace("follower_count", "M", "000000"))
     .withColumn("save_location", F.regexp_replace("save_location", "Local save in", ""))
-    .select(
-        "title",
-        "category",
-        "description",
-        "is_image_or_video",
-        "save_location",
+    .withColumn("follower_count", F.col("follower_count").cast("int"))
+    .withColumn(
         "tag_list",
-        "downloaded",
-        "unique_id",
-        "follower_count",
-        "image_src",
+        F.regexp_replace(
+            "tag_list", "N,o, ,T,a,g,s, ,A,v,a,i,l,a,b,l,e", "No Tags Available"
+        ),
     )
-    .withColumn("follower_count", exploding_df["follower_count"].cast("int"))
+    .filter(
+        ~(
+            (F.col("title") == "No Title Data Available")
+            & (F.col("description") == "No description available Story format")
+        )
+    )
+    .withColumn(
+        "been_downloaded", F.when(F.col("downloaded") == 1, True).otherwise(False)
+    )
+    .drop("downloaded")
+    .withColumnRenamed("been_downloaded", "downloaded")
+    .drop("poster_name")
 )
 
-exploding_df.writeStream.outputMode("append").format(
-    "console"
+
+def write_to_postgres(df, epoch_id):
+    df.write.format("jdbc").options(
+        url="jdbc:postgresql://localhost:5432/pinterest_streaming",
+        driver="org.postgresql.Driver",
+        dbtable="experimental_data",
+        user="postgres",
+        password="pgpassword",
+    ).mode("append").save()
+
+
+# exploding_df.writeStream.outputMode("append").format(
+#     "console"
+# ).start().awaitTermination()
+
+exploding_df.writeStream.outputMode("append").format("console").foreachBatch(
+    write_to_postgres
 ).start().awaitTermination()

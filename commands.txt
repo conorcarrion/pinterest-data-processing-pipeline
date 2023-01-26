@@ -1,0 +1,9 @@
+
+cd /usr/local/kafka_2.13-3.3.1/ && sudo bin/zookeeper-server-start.sh config/zookeeper.properties
+
+cd /usr/local/kafka_2.13-3.3.1/ && sudo bin/kafka-server-start.sh config/server.properties
+
+
+cd /home/conor/Documents/Coding/Pinterest && python3 User_Emulation/user_posting_emulation.py 
+
+cd /home/conor/Documents/Coding/Pinterest && python3 API/pin_api.py 
