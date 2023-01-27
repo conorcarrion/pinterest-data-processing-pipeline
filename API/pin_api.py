@@ -1,9 +1,7 @@
-from fastapi import FastAPI
-import uvicorn
-import json
-from lib.data import Data
-from lib.producer import MyKafkaProducer
 import configparser
+import uvicorn
+from fastapi import FastAPI
+from Pinterest.lib.batch.producer import MyKafkaProducer
 from pydantic import BaseModel
 
 app = FastAPI()

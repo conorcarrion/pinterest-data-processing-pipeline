@@ -6,3 +6,4 @@ spark.ipynb
 kafka.ipynb
 pom.xml
 commands.txt
+__pycache__
