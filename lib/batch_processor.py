@@ -1,7 +1,7 @@
 from gcp_bucket import GCPBucketClient
 from data_cleaning import DataCleaner
 from batch_consumer import MyKafkaConsumer
-from spark import BatchSpark
+from lib.batch_spark import BatchSpark
 
 
 def run():

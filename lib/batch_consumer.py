@@ -3,8 +3,6 @@ import json
 import uuid
 from kafka import KafkaConsumer
 from kafka import TopicPartition
-from kafka import OffsetAndMetadata
-from lib.gcp_bucket import GCPBucketClient
 
 
 class MyKafkaConsumer:

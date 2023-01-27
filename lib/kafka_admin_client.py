@@ -1,7 +1,5 @@
 from kafka import KafkaAdminClient
 from kafka.admin import NewTopic
-from kafka.cluster import ClusterMetadata
-
 
 class MyKafkaAdminClient:
     def __init__(self) -> None:
