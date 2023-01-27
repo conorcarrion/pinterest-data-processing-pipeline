@@ -3,7 +3,6 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.utils.dates import days_ago
 from batch_processor import run
-import os
 
 
 # Default arguments for the DAG

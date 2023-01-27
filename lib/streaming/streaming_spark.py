@@ -1,7 +1,6 @@
 import os
 import pyspark.sql.types as T
 import pyspark.sql.functions as F
-from pyspark.sql import DataFrameWriter
 from pyspark.sql import SparkSession
 from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
