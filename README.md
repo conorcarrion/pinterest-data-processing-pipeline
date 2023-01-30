@@ -67,9 +67,19 @@ in the terminal to confirm my topic had been created.
 
 #### [KafkaProducer](lib/batch/producer.py)
 
-I created a KafkaProducer class and added a method which sends a message to the topic. I used `json.dumps().encode(ascii)` as the serializer. The value serializer is a function  that is used to convert the payload/value of a message being sent to the Kafka broker into bytes before being transmitted over the network.
+I created a KafkaProducer class using the [docs](https://kafka-python.readthedocs.io/en/master/apidoc/KafkaProducer.html) and added a method which sends a message to the topic. I used `json.dumps().encode(ascii)` as the serializer. The value serializer is a function  that is used to convert the payload/value of a message being sent to the Kafka broker into bytes before being transmitted over the network.
+
+I added `kf = MyKafkaProducer(config.get("DEFAULT", "bootstrap.servers"))` to my API and then within the webhook receiver I added `kf.send_message(topic="Pins", value=data)` so that the Pin event is sent to the topic "Pins". 
+
+#### [KafkaConsumer](lib/batch/batch_consumer.py)
+
+I created a KafkaConsumer class using some boilerplate code from chatgpt and arguments from the [docs](https://kafka-python.readthedocs.io/en/master/apidoc/KafkaConsumer.html).
+While the project suggests I use a AWS S3 bucket, I have used amazon cloud services for another project, so I wanted to use google cloud platform instead so that I could get some experience using the google interface (Amazon also charged me £18 for an RDS table with 5 rows in it, so I was feeling a bit miffed with them). So after configuring the Google cloud platform bucket using the web interface, I added a method to MyKafkaConsumer to consume messages from the topic and upload them to the bucket in the form `filename.json`. Each filename was given a unique uuid using the uuid library.
+
+#### [Spark](lib/batch/batch_spark.py)
+
+`pip install Pyspark` to start off. I created a yaml file with the details for the Google Cloud Platform credentials and made a "BatchSpark" class in batch_spark.py. I initially was using a "gcs connector.jar" from Maven but I could not get it to work and found another method via trawling Stack Overflow, other forums and chatgpt. I added a method to load all the json files in the bucket using *.json.
+
+#### [Data Cleaning](lib/admin/data_cleaning.py)
 
 
-
-
-#### Consumer
