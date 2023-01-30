@@ -1,9 +1,5 @@
 pintvenv
 User_Emulation
 config
-airflow.ipynb
-spark.ipynb
-kafka.ipynb
-pom.xml
-commands.txt
 __pycache__
+pictures
