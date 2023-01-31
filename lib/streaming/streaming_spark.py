@@ -1,6 +1,8 @@
 import os
+import yaml
 import pyspark.sql.types as T
 import pyspark.sql.functions as F
+from admin.data_clean import data_clean
 from pyspark.sql import SparkSession
 from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
@@ -46,53 +48,32 @@ schema = T.ArrayType(
     )
 )
 
-exploding_df = data_df.withColumn(
+expanded_df = data_df.withColumn(
     "temp", F.explode(F.from_json("value", schema))
 ).select("temp.*")
 
 
-exploding_df = (
-    exploding_df.withColumn(
-        "follower_count", F.regexp_replace("follower_count", "k", "000")
-    )
-    .withColumn("follower_count", F.regexp_replace("follower_count", "M", "000000"))
-    .withColumn("save_location", F.regexp_replace("save_location", "Local save in", ""))
-    .withColumn("follower_count", F.col("follower_count").cast("int"))
-    .withColumn(
-        "tag_list",
-        F.regexp_replace(
-            "tag_list", "N,o, ,T,a,g,s, ,A,v,a,i,l,a,b,l,e", "No Tags Available"
-        ),
-    )
-    .filter(
-        ~(
-            (F.col("title") == "No Title Data Available")
-            & (F.col("description") == "No description available Story format")
-        )
-    )
-    .withColumn(
-        "been_downloaded", F.when(F.col("downloaded") == 1, True).otherwise(False)
-    )
-    .drop("downloaded")
-    .withColumnRenamed("been_downloaded", "downloaded")
-    .drop("poster_name")
-)
+expanded_df = data_clean(expanded_df)
 
+with open("config/postgres.yaml", "r") as outfile:
+    # Load the contents of the file as a dictionary
+    credentials = yaml.safe_load(outfile)
 
 def write_to_postgres(df, epoch_id):
     df.write.format("jdbc").options(
-        url="jdbc:postgresql://localhost:5432/pinterest_streaming",
-        driver="org.postgresql.Driver",
-        dbtable="experimental_data",
-        user="postgres",
-        password="pgpassword",
+        url=credentials["url"],
+        driver=credentials["driver"],
+        dbtable=credentials["dbtable"],
+        user=credentials["user"],
+        password=credentials["pgpassword"],
     ).mode("append").save()
 
-
-# exploding_df.writeStream.outputMode("append").format(
+# print to console
+# expanded_df.writeStream.outputMode("append").format(
 #     "console"
 # ).start().awaitTermination()
 
-exploding_df.writeStream.outputMode("append").format("console").foreachBatch(
+# write to postgresql database
+expanded_df.writeStream.outputMode("append").format("console").foreachBatch(
     write_to_postgres
 ).start().awaitTermination()
