@@ -16,8 +16,11 @@ os.environ[
 sc = SparkContext("local", "Kafka Consumer")
 ssc = StreamingContext(sc, 30)
 
-spark = SparkSession.builder.appName("Streaming").getOrCreate()
-
+spark = (
+    SparkSession.builder
+    .appName("Streaming")
+    .getOrCreate()
+)
 data_df = (
     spark.readStream.format("Kafka")
     .option("kafka.bootstrap.servers", "localhost:9092")
