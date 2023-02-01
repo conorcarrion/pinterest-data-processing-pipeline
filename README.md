@@ -15,6 +15,8 @@ A recent development in the coding scene is ChatGPT, the chatbot launched with s
 
 AICore provided a python script which uses SQLAlchemy to connect to AICore's pre-setup AWS RDS server containing spoof Pinterest event data. It runs an infinite loop where it pulls a row from the database and formats it as a dictionary called result, then sends a post request: `requests.post("http://localhost:8000/pin/", json=result)` as well as printing the data event to the terminal. It then sleeps for 0-2s before continuing and pulling another row, etc, thus providing a stream of pin data for me to process.
 
+---
+
 ## Project
 
 ### [FastAPI webhook receiver](API/pin_api.py)
@@ -46,6 +48,8 @@ INFO:     127.0.0.1:46044 - "POST /pin/ HTTP/1.1" 200 OK
 ```
 HTTP status code 200 shows it is received.
 
+---
+
 ## [Kafka](https://kafka.apache.org/)
 ### Setup
 To run Kafka locally I downloaded the kafka binary from their website and installed it in usr/local/kafka_2.13-3.3.1. I ensured I had Python and Java installed.
@@ -76,28 +80,31 @@ I added `kf = MyKafkaProducer(config.get("DEFAULT", "bootstrap.servers"))` to my
 I created a KafkaConsumer class using some boilerplate code from chatgpt and arguments from the [docs](https://kafka-python.readthedocs.io/en/master/apidoc/KafkaConsumer.html).
 While the project suggests I use a AWS S3 bucket, I have used amazon cloud services for another project, so I wanted to use google cloud platform instead so that I could get some experience using the google interface (Amazon also charged me £18 for an RDS table with 5 rows in it, so I was feeling a bit miffed with them). So after configuring the Google cloud platform bucket using the web interface, I added a method to MyKafkaConsumer to consume messages from the topic and upload them to the bucket in the form `filename.json`. Each filename was given a unique uuid using the uuid library.
 
-### Other Components
-#### [Google Cloud Platform](lib/admin/gcp_bucket.py)
+---
+
+## Other Components
+
+### [Google Cloud Platform](lib/admin/gcp_bucket.py)
 
 For connection to my Google Cloud bucket I downloaded the keyfile or service account file as it is also called. It is simply a json with the details for the bucket. I used the python google cloud library to connect to my storage account and project. I then added methods to create a bucket, write to a bucket of choice and delete json files from the bucket.
 
-#### [Spark](lib/batch/batch_spark.py)
+### [Spark](lib/batch/batch_spark.py)
 
 `pip install Pyspark` to start off. I created a yaml file with the details for the Google Cloud Platform credentials and made a "BatchSpark" class in batch_spark.py. I initially was using a "gcs connector.jar" from Maven but I could not get it to work and found another method via trawling Stack Overflow, other forums and chatgpt. I added a method to load all the json files in the bucket using *.json.
 
-#### [Data Clean](lib/admin/data_clean.py)
+### [Data Clean](lib/admin/data_clean.py)
 
 The data from the pin events has some aspects which need to be adjusted. The Follower count column has a mix of thousands and millions. Some of the rows contain no information. Some of the rows have no tags in the tag_list column and it has parsed that as "N,o, ,T,a,g,s, ,A,v,a,i,l,a,b,l,e". The "been_downloaded" column is better as boolean than binary 1/0. The poster_name column has been purged for data-protection reasons so is blank and can also be dropped.
 
 
-### Airflow and [DAGs](lib/batch/batch_spark_clean_dag.py)
+### [Airflow and DAGs](lib/batch/batch_spark_clean_dag.py)
 
 A Directed acyclic graph is a core component of the apache airflow scheduling system. It is essentially a configuration file, written in python, which describes the parameters for the scheduled task.
 
 First the arguments for the DAG are described. These include when the scheduled task should start occurring, at what time, whether to retry and when. One can also describe a series of tasks, including tasks to perform in case of failure, etc.
 
 
-### Daily Batch [Run](lib/batch/run.py)
+### [Run Daily Batch Process](lib/batch/run.py)
 
 ```python
 def run():
@@ -117,3 +124,18 @@ This simple piece of code is the daily task which will be completed by the DAG. 
 
 ### [Real-Time Streaming Spark](lib/streaming/streaming_spark.py)
 
+set PYSPARK environment variables which do ...
+
+create spark context and spark streaming context
+
+create spark session
+
+set spark up to receive data from kafka, subscribing to pins topic, with offset
+
+sql query to cast/capture entire value column as a string.
+
+create schema for the expected data
+
+explode out the data from the json into a dataframe.
+
+// Add comments to code directly.

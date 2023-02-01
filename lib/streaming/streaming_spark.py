@@ -21,7 +21,7 @@ spark = (
     .appName("Streaming")
     .getOrCreate()
 )
-data_df = (
+data_stream = (
     spark.readStream.format("Kafka")
     .option("kafka.bootstrap.servers", "localhost:9092")
     .option("subscribe", "Pins")
@@ -29,7 +29,7 @@ data_df = (
     .load()
 )
 
-data_df = data_df.selectExpr("CAST(value as STRING)")
+data_string = data_stream.selectExpr("CAST(value as STRING)")
 
 
 schema = T.ArrayType(
@@ -51,12 +51,13 @@ schema = T.ArrayType(
     )
 )
 
-expanded_df = data_df.withColumn(
-    "temp", F.explode(F.from_json("value", schema))
-).select("temp.*")
+df = data_string.withColumn("temp", F.from_json("value", schema)) \
+    .select("temp.*") \
+    .select("index", "unique_id", "title", "description", "poster_name", "follower_count", "tag_list", "is_image_or_video", "image_src", "downloaded", "save_location", "category")
 
 
-expanded_df = data_clean(expanded_df)
+
+clean_df = data_clean(df)
 
 with open("config/postgres.yaml", "r") as outfile:
     # Load the contents of the file as a dictionary
@@ -72,11 +73,11 @@ def write_to_postgres(df, epoch_id):
     ).mode("append").save()
 
 # print to console
-# expanded_df.writeStream.outputMode("append").format(
+# clean_df.writeStream.outputMode("append").format(
 #     "console"
 # ).start().awaitTermination()
 
 # write to postgresql database
-expanded_df.writeStream.outputMode("append").format("console").foreachBatch(
+clean_df.writeStream.outputMode("append").format("console").foreachBatch(
     write_to_postgres
 ).start().awaitTermination()
