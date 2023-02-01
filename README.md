@@ -76,6 +76,7 @@ I added `kf = MyKafkaProducer(config.get("DEFAULT", "bootstrap.servers"))` to my
 I created a KafkaConsumer class using some boilerplate code from chatgpt and arguments from the [docs](https://kafka-python.readthedocs.io/en/master/apidoc/KafkaConsumer.html).
 While the project suggests I use a AWS S3 bucket, I have used amazon cloud services for another project, so I wanted to use google cloud platform instead so that I could get some experience using the google interface (Amazon also charged me £18 for an RDS table with 5 rows in it, so I was feeling a bit miffed with them). So after configuring the Google cloud platform bucket using the web interface, I added a method to MyKafkaConsumer to consume messages from the topic and upload them to the bucket in the form `filename.json`. Each filename was given a unique uuid using the uuid library.
 
+### Other Components
 #### [Google Cloud Platform](lib/admin/gcp_bucket.py)
 
 For connection to my Google Cloud bucket I downloaded the keyfile or service account file as it is also called. It is simply a json with the details for the bucket. I used the python google cloud library to connect to my storage account and project. I then added methods to create a bucket, write to a bucket of choice and delete json files from the bucket.
@@ -91,14 +92,12 @@ The data from the pin events has some aspects which need to be adjusted. The Fol
 
 ### Airflow and [DAGs](lib/batch/batch_spark_clean_dag.py)
 
-To run the batch process on a daily process I learned to use airflow.
+A Directed acyclic graph is a core component of the apache airflow scheduling system. It is essentially a configuration file, written in python, which describes the parameters for the scheduled task.
 
-notes to self:
-1. improve dag (remove PythonOperator, possibly deprecated)
-2. be consistent with spark setup for batch & stream, check docs
-3.
+First the arguments for the DAG are described. These include when the scheduled task should start occurring, at what time, whether to retry and when. One can also describe a series of tasks, including tasks to perform in case of failure, etc.
 
-### [Run](lib/batch/run.py)
+
+### Daily Batch [Run](lib/batch/run.py)
 
 ```python
 def run():
@@ -114,3 +113,7 @@ def run():
 
     client.delete_json_files("project-pin-api")
 ```
+This simple piece of code is the daily task which will be completed by the DAG. A Google Cloud Platform client is created which connects to my project. A spark instance is created. My kafka consumer then consumes messages from the topic and uploads them as json files to the bucket. Spark then loads these json files as a batch of data and loads it to a dataframe. Some cleaning is done on the batch. At this point the dataframe could be loaded to some long term storage or analysis performed and the metrics from that analysis saved. Finally a clean up of the contents of the bucket is performed.
+
+### [Real-Time Streaming Spark](lib/streaming/streaming_spark.py)
+
