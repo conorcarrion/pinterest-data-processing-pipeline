@@ -1,14 +1,14 @@
 from datetime import timedelta
+from datetime import datetime
 from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
-from airflow.utils.dates import days_ago
+from airflow.operators.python import PythonOperator
 from run import run
 
 
 # Default arguments for the DAG
 default_args = {
-    "owner": "me",
-    "start_date": days_ago(2),
+    "owner": "Conor Quinn",
+    "start_date": datetime.now().date(),
     "depends_on_past": False,
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
@@ -16,7 +16,7 @@ default_args = {
 
 # Create the DAG
 dag = DAG(
-    "batch_processor_dag",
+    "run_dag",
     default_args=default_args,
     schedule_interval="0 0 * * *",  # Run daily at midnight
     catchup=False,
@@ -29,5 +29,5 @@ batch_processor_task = PythonOperator(
     dag=dag,
 )
 
-# Set the task dependencies
+
 batch_processor_task
