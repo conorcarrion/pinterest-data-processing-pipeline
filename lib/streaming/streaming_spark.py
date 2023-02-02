@@ -13,7 +13,7 @@ os.environ[
 ] = "--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.1,org.postgresql:postgresql:42.2.14 pyspark-shell"
 
 
-sc = SparkContext("local", "Kafka Consumer")
+sc = SparkContext("local", "Kafka Stream")
 ssc = StreamingContext(sc, 30)
 
 spark = (
@@ -51,10 +51,9 @@ schema = T.ArrayType(
     )
 )
 
-df = data_string.withColumn("temp", F.from_json("value", schema)) \
-    .select("temp.*") \
-    .select("index", "unique_id", "title", "description", "poster_name", "follower_count", "tag_list", "is_image_or_video", "image_src", "downloaded", "save_location", "category")
-
+df = data_string.withColumn(
+    "temp", F.explode(F.from_json("value", schema))
+).select("temp.*")
 
 
 clean_df = data_clean(df)
@@ -63,13 +62,13 @@ with open("config/postgres.yaml", "r") as outfile:
     # Load the contents of the file as a dictionary
     credentials = yaml.safe_load(outfile)
 
-def write_to_postgres(df, epoch_id):
+def write_to_postgres(df):
     df.write.format("jdbc").options(
         url=credentials["url"],
         driver=credentials["driver"],
         dbtable=credentials["dbtable"],
         user=credentials["user"],
-        password=credentials["pgpassword"],
+        password=credentials["password"],
     ).mode("append").save()
 
 # print to console

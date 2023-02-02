@@ -122,20 +122,54 @@ def run():
 ```
 This simple piece of code is the daily task which will be completed by the DAG. A Google Cloud Platform client is created which connects to my project. A spark instance is created. My kafka consumer then consumes messages from the topic and uploads them as json files to the bucket. Spark then loads these json files as a batch of data and loads it to a dataframe. Some cleaning is done on the batch. At this point the dataframe could be loaded to some long term storage or analysis performed and the metrics from that analysis saved. Finally a clean up of the contents of the bucket is performed.
 
-### [Real-Time Streaming Spark](lib/streaming/streaming_spark.py)
+---
 
-set PYSPARK environment variables which do ...
+## [Real-Time Streaming Spark](lib/streaming/streaming_spark.py)
+### Setup
+To configure Spark I set an environment variable called `PYSPARK_SUBMIT_ARGS`. This specifies the command line arguments passed to spark-submit. Spark-submit is the command line tool for submitting a Spark application to a cluster for execution.
 
-create spark context and spark streaming context
+The argument `--packages` is used to specify the external packages to include in the Spark application, in this case the packages `spark-sql-kafka-0-10_2.12:3.2.1` and `org.postgresql:postgresql:42.2.14`. These are, as self-evident, for spark-kafka and postgresql functionality.
 
-create spark session
+The argument `pyspark-shell` specifies the entry point for the Spark application, in this case a PySpark shell.
 
-set spark up to receive data from kafka, subscribing to pins topic, with offset
+Next, I set up a SparkContext, with the cluster url set as "local" and the app named "Kafka Stream". I set the StreamingContext with a batch interval of 30 seconds.
 
-sql query to cast/capture entire value column as a string.
+Finally, I configured the SparkSession to read data from a Kafka topic. The readStream method is used to specify that this is a streaming data source, and the format is set to "Kafka". The option method is used to set various options for the Kafka consumer, such as the bootstrap servers, the topic to subscribe to, and the starting offsets. The load method is called to load the data into the SparkSession.
 
-create schema for the expected data
+The streaming data can now be processed.
 
-explode out the data from the json into a dataframe.
+### Processing
 
-// Add comments to code directly.
+The data read from the Kafka topic is stored in the "data_stream" DataFrame, which is then converted to a string type using the "selectExpr" method and stored in the "data_string" DataFrame. This data is essentially a table with 1 column "value", with the entry as the data.
+
+```python
+df = data_string.withColumn(
+    "temp", F.explode(F.from_json("value", schema))
+).select("temp.*")
+```
+
+I defined the schema for the data as an array of various fields such as index, unique_id, title, etc. The "data_string" DataFrame is then exploded and converted to the defined schema using the "from_json" function. I did this by creating a new "temp" column, setting the value of that column to this exploded dataframe, then selecting the nested dataframe which is the entry in the temp column.
+
+The processed data is then passed through my custom "data_clean" function to further clean and transform it, and the result is stored in the "clean_df" DataFrame.
+
+Finally, by setting up my write_to_postgres function, which takes credentials from a yaml file, I can complete the stream process with:
+```python
+clean_df.writeStream.outputMode("append").format("console").foreachBatch(
+    write_to_postgres
+).start().awaitTermination()
+```
+From ChatGPT:
+
+writeStream: This is a method of the Spark DataFrame API that starts writing data to a sink. It returns a StreamingWrite object that represents the streaming query.
+
+outputMode("append"): This method sets the output mode for the stream to "append". The "append" mode means that new data will be appended to the existing data in the sink.
+
+format("console"): This method sets the data format to console. The data will be written to the console as the output sink.
+
+foreachBatch: This is a method of the StreamingWrite object that allows you to execute a batch-wise operation on the data. In this case, write_to_postgres function is passed as an argument to foreachBatch. The function will be executed on each batch of data that is processed.
+
+write_to_postgres: This is a custom function that writes the processed data to a PostgreSQL database.
+
+start: This is a method of the StreamingWrite object that starts the streaming query.
+
+awaitTermination: This is a method of the StreamingContext object that blocks the current thread until the streaming query terminates.

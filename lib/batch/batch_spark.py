@@ -10,15 +10,14 @@ class BatchSpark:
             # Load the contents of the file as a dictionary
             self.credentials = yaml.safe_load(outfile)
 
-        conf = SparkConf().setAppName("myApp")
-        sc = SparkContext(conf=conf)
-
-        spark = SparkSession(sc)
-        spark.conf.set("google.cloud.auth.service.account.enable", "true")
-        spark.conf.set(
-            "google.cloud.auth.service.account.json.keyfile",
-            self.credentials["gcp_key_file"],
+        spark = (
+            SparkSession.builder
+            .appName("BatchSpark")
+            .config("google.cloud.auth.service.account.enable", "true")
+            .config("google.cloud.auth.service.account.json.keyfile", self.credentials["gcp_key_file"])
+            .getOrCreate()
         )
+
 
         self.spark = spark
         return self.spark
